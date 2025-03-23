@@ -1,0 +1,40 @@
+name: Backup MySQL Database
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@v3
+
+      - name: Instalar Docker y Docker Compose
+        run: |
+          sudo apt update
+          sudo apt install -y docker-compose
+
+      - name: Levantar MySQL con Docker Compose
+        run: |
+          docker-compose up -d
+          sleep 10
+
+      - name: Ejecutar Backup
+        run: |
+          chmod +x backup.sh
+          ./backup.sh
+
+      - name: Subir Backup a GitHub
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git remote set-url origin https://github.com/22041154/backup-vehiculos.git
+          git add backup_*.sql
+          git commit -m "Backup automático - $(date)"
+          git push https://22041154:${{ secrets.GH_TOKEN }}@github.com/22041154/backup-vehiculos.git HEAD:main
